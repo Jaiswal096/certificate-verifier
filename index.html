@@ -8,18 +8,18 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React & ReactDOM (Global CDN) -->
+    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Babel for JSX -->
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- PDF & Image Generation Libraries -->
+    <!-- PDF Libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- Google Fonts -->
+    <!-- Fonts -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&display=swap');
         
@@ -102,7 +102,8 @@
                     date: new Date().toISOString().split('T')[0],
                     institutionName: "Royal Academy of Arts",
                     title: "Certificate of Appreciation",
-                    verificationUrl: "" // Will be filled by useEffect or user input
+                    // NOTE: This is hardcoded to your specific GitHub URL to prevent "empty QR" errors
+                    verificationUrl: "https://jaiswal096.github.io/certificate-verifier/"
                 };
             });
 
@@ -116,16 +117,21 @@
                 if (mode === 'edit' && !data.verificationUrl) {
                     setData(prev => ({
                         ...prev,
-                        verificationUrl: window.location.href.split('?')[0]
+                        verificationUrl: "https://jaiswal096.github.io/certificate-verifier/"
                     }));
                 }
             }, [mode]);
 
             // Create the Magic Link
             const generateVerificationLink = () => {
-                // Use the user's input URL, or fall back to current window URL
-                let baseUrl = data.verificationUrl || window.location.href.split('?')[0];
-                // Remove trailing slash if present for clean URL construction
+                // Use the user's input URL, or fall back to default
+                let baseUrl = data.verificationUrl;
+                
+                // Safety check: if empty, force the GitHub link
+                if (!baseUrl) {
+                    baseUrl = "https://jaiswal096.github.io/certificate-verifier/";
+                }
+                
                 baseUrl = baseUrl.replace(/\/$/, "");
 
                 const params = new URLSearchParams({
@@ -201,7 +207,8 @@
                     setData({
                         candidateName: "", description: "", founderName: "", signatoryTitle: "",
                         founderEmail: "", date: new Date().toISOString().split('T')[0],
-                        institutionName: "", title: "Certificate of Appreciation", verificationUrl: window.location.href.split('?')[0]
+                        institutionName: "", title: "Certificate of Appreciation", 
+                        verificationUrl: "https://jaiswal096.github.io/certificate-verifier/"
                     });
                     setImage(null);
                 }
@@ -398,4 +405,5 @@
     </script>
 </body>
 </html>
+
 
