@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,18 +8,18 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React & ReactDOM -->
+    <!-- React & ReactDOM (Global CDN) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Babel -->
+    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- PDF Libs -->
+    <!-- PDF & Image Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- Fonts -->
+    <!-- Google Fonts -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&display=swap');
         
@@ -59,8 +58,10 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- HARDCODED URL (CRITICAL FOR QR SCANNERS) ---
-        // This ensures the QR code is ALWAYS a valid web link to your site.
+        // =================================================================
+        //  YOUR WEBSITE LINK (HARDCODED FIX)
+        //  This ensures the QR code ALWAYS links to the internet.
+        // =================================================================
         const HOSTED_URL = "https://jaiswal096.github.io/certificate-verifier/";
 
         // --- ICONS ---
@@ -75,7 +76,6 @@
         const IconRotate = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>;
 
         function App() {
-            // Determine mode from URL
             const [mode, setMode] = useState(() => {
                 const params = new URLSearchParams(window.location.search);
                 if (params.get('mode') === 'verify') return 'verify';
@@ -107,7 +107,7 @@
                     date: new Date().toISOString().split('T')[0],
                     institutionName: "Royal Academy of Arts",
                     title: "Certificate of Appreciation",
-                    verificationUrl: HOSTED_URL // Default to the hosted URL
+                    verificationUrl: HOSTED_URL // Default to Hardcoded URL
                 };
             });
 
@@ -116,12 +116,17 @@
             const fileInputRef = useRef(null);
             const certificateRef = useRef(null);
 
-            // Create the Magic Link
-            const generateVerificationLink = () => {
-                // Use the hardcoded HOSTED_URL to ensure it works on mobile
+            // --- GENERATE QR LINK (THE FIX) ---
+            const getQrLink = () => {
+                // FORCE THE URL: Ignore what the browser says, use the GitHub link.
                 let baseUrl = HOSTED_URL;
                 
-                // Remove trailing slash if present
+                // Allow user override if they manually type a DIFFERENT https link in the box, 
+                // but default to the hardcoded one if they are on localhost or file system.
+                if (data.verificationUrl && data.verificationUrl.startsWith('https://')) {
+                    baseUrl = data.verificationUrl;
+                }
+                
                 baseUrl = baseUrl.replace(/\/$/, "");
 
                 const params = new URLSearchParams({
@@ -137,6 +142,11 @@
                 });
                 return `${baseUrl}/?${params.toString()}`;
             };
+
+            // Calculate the QR Image URL
+            // Using "ecc=L" (Low Error Correction) makes the dots simpler and easier to scan
+            const fullVerificationLink = getQrLink();
+            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&qzone=2&data=${encodeURIComponent(fullVerificationLink)}`;
 
             const handleInputChange = (e) => {
                 const { name, value } = e.target;
@@ -168,7 +178,7 @@
                     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                     pdf.save(`${data.candidateName.replace(/\s+/g, '_')}_Certificate.pdf`);
                 } catch (error) {
-                    alert("PDF Generation failed. Try 'Print' -> 'Save as PDF'.");
+                    alert("PDF Generation failed. Try the 'Print' button.");
                 } finally {
                     setIsGenerating(false);
                 }
@@ -206,16 +216,17 @@
 
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&margin=10&data=${encodeURIComponent(generateVerificationLink())}`;
 
-            // --- VERIFY MODE (Scanner View) ---
+            // --- VERIFY MODE ---
             if (mode === 'verify') {
                 return (
                     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
                         <div className="bg-white p-6 rounded-lg shadow-xl mb-8 max-w-md w-full text-center border-b-4 border-green-500 animate-fade-in">
                             <IconCheckCircle />
                             <h1 className="text-2xl font-bold text-gray-800">Verified Certificate</h1>
-                            <p className="text-gray-600 mt-2">This document has been digitally verified.</p>
+                            <p className="text-gray-600 mt-2 text-sm">This is a valid digital credential.</p>
                         </div>
-                        <div className="w-full max-w-5xl overflow-hidden rounded-lg shadow-2xl bg-parchment relative transform scale-95 md:scale-100 origin-top">
+                        
+                        <div className="w-full max-w-5xl overflow-hidden rounded-lg shadow-2xl bg-parchment relative transform scale-95 md:scale-100 origin-top animate-fade-in">
                              <div className="bg-parchment relative text-slate-900 p-8 md:p-16 flex flex-col items-center text-center border-8 border-slate-900">
                                 <div className="absolute inset-4 border-2 border-gold pointer-events-none"></div>
                                 <div className="mb-6">
@@ -240,6 +251,7 @@
                                 </div>
                              </div>
                         </div>
+                        
                         <div className="mt-8 text-gray-500 text-sm">
                             <a href={HOSTED_URL} className="hover:text-white transition-colors underline">Create your own certificate</a>
                         </div>
@@ -313,13 +325,18 @@
                                         placeholder="https://yourname.github.io/repo/" 
                                     />
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-1">This link is embedded in the QR code.</p>
+                                <p className="text-[10px] text-slate-400 mt-1">Paste your deployed GitHub link here if running locally.</p>
                             </div>
 
                             <div className="pt-4 border-t">
                                 <button onClick={handleReset} className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded shadow-sm transition-colors text-xs font-medium flex items-center justify-center gap-2">
                                     <IconRotate /> Reset Form
                                 </button>
+                            </div>
+                            
+                            <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded text-[10px] text-blue-800">
+                                <strong>Status:</strong> QR Codes will link to: <br/>
+                                <code className="break-all">{HOSTED_URL}</code>
                             </div>
                         </div>
                     </div>
@@ -369,7 +386,7 @@
                                     <div className="relative mx-4 flex flex-col items-center">
                                         <div className="w-32 h-32 rounded-full bg-gradient-to-br from-yellow-400 via-yellow-600 to-yellow-800 shadow-md flex items-center justify-center p-1.5">
                                             <div className="w-full h-full rounded-full border-2 border-yellow-200 border-dashed flex items-center justify-center bg-white overflow-hidden">
-                                                <img src={qrCodeUrl} className="w-24 h-24 mix-blend-multiply" />
+                                                <img src={qrImageUrl} className="w-24 h-24 mix-blend-multiply" alt="Verify" />
                                             </div>
                                         </div>
                                         <span className="font-header text-[10px] font-bold tracking-widest text-slate-600 mt-2 uppercase">Scan to Verify</span>
@@ -395,6 +412,3 @@
     </script>
 </body>
 </html>
-
-
-
