@@ -30,11 +30,9 @@
         .bg-gold { background-color: #b49b57; }
         .bg-parchment { background-color: #fffcf5; }
         
-        /* Fade in animation */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
 
-        /* Hide elements when printing */
         @media print {
             .no-print { display: none !important; }
             body { margin: 0; padding: 0; background: white; }
@@ -58,10 +56,9 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // NOTE: We use React.useState here (Global), NOT import
         const { useState, useEffect, useRef } = React;
 
-        // --- ICONS (Defined inline so no imports needed) ---
+        // --- ICONS ---
         const IconPrinter = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>;
         const IconUpload = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
         const IconAward = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>;
@@ -73,20 +70,17 @@
         const IconRotate = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>;
 
         function App() {
-            // IMMEDIATE CHECK: Initialize state based on URL before component even mounts
+            // Determine mode from URL
             const [mode, setMode] = useState(() => {
                 const params = new URLSearchParams(window.location.search);
-                // Check for 'mode=verify' OR 'verify=true'
-                if (params.get('mode') === 'verify' || params.get('verify') === 'true') {
-                    return 'verify';
-                }
+                if (params.get('mode') === 'verify') return 'verify';
                 return 'edit';
             });
 
             const [data, setData] = useState(() => {
                 const params = new URLSearchParams(window.location.search);
-                // Initialize data from URL if verifying, otherwise defaults
-                if (params.get('mode') === 'verify' || params.get('verify') === 'true') {
+                if (params.get('mode') === 'verify') {
+                    // Load data from URL for verification
                     return {
                         candidateName: params.get('name') || "",
                         description: params.get('desc') || "",
@@ -95,7 +89,8 @@
                         founderEmail: params.get('mail') || "",
                         date: params.get('date') || "",
                         institutionName: params.get('inst') || "",
-                        title: params.get('title') || ""
+                        title: params.get('title') || "",
+                        verificationUrl: "" // Not needed in verify mode
                     };
                 }
                 return {
@@ -106,7 +101,8 @@
                     founderEmail: "sarah@institution.org",
                     date: new Date().toISOString().split('T')[0],
                     institutionName: "Royal Academy of Arts",
-                    title: "Certificate of Appreciation"
+                    title: "Certificate of Appreciation",
+                    verificationUrl: "" // Will be filled by useEffect or user input
                 };
             });
 
@@ -115,11 +111,25 @@
             const fileInputRef = useRef(null);
             const certificateRef = useRef(null);
 
-            // Generate the Verification Link automatically
+            // Set default verification URL on load (if not verifying)
+            useEffect(() => {
+                if (mode === 'edit' && !data.verificationUrl) {
+                    setData(prev => ({
+                        ...prev,
+                        verificationUrl: window.location.href.split('?')[0]
+                    }));
+                }
+            }, [mode]);
+
+            // Create the Magic Link
             const generateVerificationLink = () => {
-                const baseUrl = window.location.href.split('?')[0];
+                // Use the user's input URL, or fall back to current window URL
+                let baseUrl = data.verificationUrl || window.location.href.split('?')[0];
+                // Remove trailing slash if present for clean URL construction
+                baseUrl = baseUrl.replace(/\/$/, "");
+
                 const params = new URLSearchParams({
-                    mode: 'verify', // Force verification mode
+                    mode: 'verify',
                     name: data.candidateName,
                     desc: data.description,
                     sig: data.founderName,
@@ -129,7 +139,7 @@
                     inst: data.institutionName,
                     title: data.title
                 });
-                return `${baseUrl}?${params.toString()}`;
+                return `${baseUrl}/?${params.toString()}`;
             };
 
             const handleInputChange = (e) => {
@@ -152,11 +162,7 @@
                 try {
                     const element = certificateRef.current;
                     const canvas = await window.html2canvas(element, {
-                        scale: 2, 
-                        useCORS: true,
-                        allowTaint: true,
-                        backgroundColor: '#fffcf5', 
-                        logging: false
+                        scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#fffcf5', logging: false
                     });
                     const imgData = canvas.toDataURL('image/png');
                     const { jsPDF } = window.jspdf;
@@ -193,14 +199,9 @@
             const handleReset = () => {
                 if (window.confirm("Clear all fields?")) {
                     setData({
-                        candidateName: "",
-                        description: "",
-                        founderName: "",
-                        signatoryTitle: "",
-                        founderEmail: "",
-                        date: new Date().toISOString().split('T')[0],
-                        institutionName: "",
-                        title: "Certificate of Appreciation"
+                        candidateName: "", description: "", founderName: "", signatoryTitle: "",
+                        founderEmail: "", date: new Date().toISOString().split('T')[0],
+                        institutionName: "", title: "Certificate of Appreciation", verificationUrl: window.location.href.split('?')[0]
                     });
                     setImage(null);
                 }
@@ -208,42 +209,28 @@
 
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&margin=10&data=${encodeURIComponent(generateVerificationLink())}`;
 
-
-            // ==========================================
-            //  VIEWER MODE (What scanner sees)
-            // ==========================================
+            // --- VERIFY MODE (Scanner View) ---
             if (mode === 'verify') {
                 return (
                     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
-                        
-                        {/* Verified Banner */}
                         <div className="bg-white p-6 rounded-lg shadow-xl mb-8 max-w-md w-full text-center border-b-4 border-green-500 animate-fade-in">
                             <IconCheckCircle />
                             <h1 className="text-2xl font-bold text-gray-800">Verified Certificate</h1>
                             <p className="text-gray-600 mt-2">This document has been digitally verified.</p>
                         </div>
-                        
-                        {/* Read-Only Certificate View */}
                         <div className="w-full max-w-5xl overflow-hidden rounded-lg shadow-2xl bg-parchment relative transform scale-95 md:scale-100 origin-top">
                              <div className="bg-parchment relative text-slate-900 p-8 md:p-16 flex flex-col items-center text-center border-8 border-slate-900">
-                                
                                 <div className="absolute inset-4 border-2 border-gold pointer-events-none"></div>
-                                
-                                {/* Header */}
                                 <div className="mb-6">
                                     <div className="w-20 h-20 rounded-full border-4 border-slate-900 bg-white flex items-center justify-center mx-auto mb-4">
                                          <IconAward className="w-10 h-10 text-slate-800" />
                                     </div>
                                     <h2 className="text-xl font-header font-bold text-slate-800 uppercase tracking-widest">{data.institutionName}</h2>
                                 </div>
-
                                 <h1 className="text-3xl md:text-5xl font-header font-black text-gold uppercase border-b-2 border-slate-900 pb-4 px-8 mb-6">{data.title}</h1>
-                                
                                 <p className="font-body text-slate-500 italic text-lg mb-2">Awarded to</p>
                                 <div className="text-4xl md:text-6xl font-header font-bold text-slate-900 mb-8 uppercase tracking-wide">{data.candidateName}</div>
-                                
                                 <p className="text-xl font-body leading-relaxed text-slate-700 mb-12 max-w-2xl">{data.description}</p>
-                                
                                 <div className="grid grid-cols-2 w-full gap-12 mt-4 px-12">
                                     <div className="flex flex-col items-center">
                                         <span className="font-header text-xl font-bold border-b-2 border-slate-400 pb-2 w-full">{data.date}</span>
@@ -256,7 +243,6 @@
                                 </div>
                              </div>
                         </div>
-
                         <div className="mt-8 text-gray-500 text-sm">
                             <a href={window.location.href.split('?')[0]} className="hover:text-white transition-colors underline">Create your own certificate</a>
                         </div>
@@ -264,10 +250,7 @@
                 );
             }
 
-
-            // ==========================================
-            //  EDITOR MODE (What YOU see)
-            // ==========================================
+            // --- EDITOR MODE ---
             return (
                 <div className="flex flex-col lg:flex-row min-h-screen">
                     <div className="no-print w-full lg:w-1/3 bg-white p-6 shadow-xl z-10 overflow-y-auto border-r border-gray-200 h-screen">
@@ -301,10 +284,13 @@
                                 <p className="text-xs font-semibold text-slate-700">{image ? "Change Logo" : "Upload Logo"}</p>
                             </div>
 
-                            <input type="text" name="title" value={data.title} onChange={handleInputChange} placeholder="Title" className="w-full px-3 py-2 border border-slate-300 rounded text-sm" />
-                            <input type="text" name="institutionName" value={data.institutionName} onChange={handleInputChange} placeholder="Institution" className="w-full px-3 py-2 border border-slate-300 rounded text-sm" />
-                            <input type="text" name="candidateName" value={data.candidateName} onChange={handleInputChange} placeholder="Recipient Name" className="w-full px-3 py-2 border border-slate-300 rounded text-sm font-semibold" />
-                            <textarea name="description" value={data.description} onChange={handleInputChange} rows={3} placeholder="Citation" className="w-full px-3 py-2 border border-slate-300 rounded text-sm"></textarea>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Details</label>
+                                <input type="text" name="title" value={data.title} onChange={handleInputChange} placeholder="Title" className="w-full px-3 py-2 border border-slate-300 rounded text-sm" />
+                                <input type="text" name="institutionName" value={data.institutionName} onChange={handleInputChange} placeholder="Institution" className="w-full px-3 py-2 border border-slate-300 rounded text-sm" />
+                                <input type="text" name="candidateName" value={data.candidateName} onChange={handleInputChange} placeholder="Recipient Name" className="w-full px-3 py-2 border border-slate-300 rounded text-sm font-semibold" />
+                                <textarea name="description" value={data.description} onChange={handleInputChange} rows={3} placeholder="Citation" className="w-full px-3 py-2 border border-slate-300 rounded text-sm"></textarea>
+                            </div>
                             
                             <div className="grid grid-cols-2 gap-2">
                                 <input type="date" name="date" value={data.date} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-300 rounded text-sm" />
@@ -316,6 +302,23 @@
                                 <input type="email" name="founderEmail" value={data.founderEmail} onChange={handleInputChange} placeholder="Email" className="w-full px-3 py-2 border border-slate-300 rounded text-sm" />
                             </div>
 
+                            {/* VERIFICATION URL INPUT - Added Back */}
+                            <div className="mt-4">
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Verification URL (GitHub Link)</label>
+                                <div className="relative">
+                                    <div className="absolute left-3 top-2.5"><IconQrCode /></div>
+                                    <input 
+                                        type="text" 
+                                        name="verificationUrl" 
+                                        value={data.verificationUrl} 
+                                        onChange={handleInputChange} 
+                                        className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded text-sm bg-slate-50" 
+                                        placeholder="https://yourname.github.io/repo/" 
+                                    />
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1">Paste your deployed GitHub link here if running locally.</p>
+                            </div>
+
                             <div className="pt-4 border-t">
                                 <button onClick={handleReset} className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded shadow-sm transition-colors text-xs font-medium flex items-center justify-center gap-2">
                                     <IconRotate /> Reset Form
@@ -324,6 +327,7 @@
                         </div>
                     </div>
 
+                    {/* PREVIEW AREA */}
                     <div className="flex-1 bg-slate-800 p-4 lg:p-8 overflow-auto flex items-center justify-center">
                         <div ref={certificateRef} className="print-area bg-parchment shadow-2xl relative text-slate-900" style={{ width: '297mm', height: '210mm', minWidth: '297mm', minHeight: '210mm' }}>
                             <div className="absolute inset-4 border-[6px] border-slate-900 z-10"></div>
@@ -394,3 +398,4 @@
     </script>
 </body>
 </html>
+
