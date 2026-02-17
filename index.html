@@ -102,8 +102,8 @@
                     date: new Date().toISOString().split('T')[0],
                     institutionName: "Royal Academy of Arts",
                     title: "Certificate of Appreciation",
-                    // NOTE: This is hardcoded to your specific GitHub URL to prevent "empty QR" errors
-                    verificationUrl: "https://jaiswal096.github.io/certificate-verifier/"
+                    // FORCE THE URL HERE
+                    verificationUrl: "https://jaiswal096.github.io/certificate-verifier/" 
                 };
             });
 
@@ -112,24 +112,14 @@
             const fileInputRef = useRef(null);
             const certificateRef = useRef(null);
 
-            // Set default verification URL on load (if not verifying)
-            useEffect(() => {
-                if (mode === 'edit' && !data.verificationUrl) {
-                    setData(prev => ({
-                        ...prev,
-                        verificationUrl: "https://jaiswal096.github.io/certificate-verifier/"
-                    }));
-                }
-            }, [mode]);
-
             // Create the Magic Link
             const generateVerificationLink = () => {
-                // Use the user's input URL, or fall back to default
-                let baseUrl = data.verificationUrl;
+                // FORCE THE URL: Ignore what the browser says, use the GitHub link.
+                let baseUrl = "https://jaiswal096.github.io/certificate-verifier/";
                 
-                // Safety check: if empty, force the GitHub link
-                if (!baseUrl) {
-                    baseUrl = "https://jaiswal096.github.io/certificate-verifier/";
+                // Allow user override if they type in the box, otherwise stick to hardcoded
+                if (data.verificationUrl && data.verificationUrl.startsWith('http')) {
+                    baseUrl = data.verificationUrl;
                 }
                 
                 baseUrl = baseUrl.replace(/\/$/, "");
@@ -251,7 +241,7 @@
                              </div>
                         </div>
                         <div className="mt-8 text-gray-500 text-sm">
-                            <a href={window.location.href.split('?')[0]} className="hover:text-white transition-colors underline">Create your own certificate</a>
+                            <a href="https://jaiswal096.github.io/certificate-verifier/" className="hover:text-white transition-colors underline">Create your own certificate</a>
                         </div>
                     </div>
                 );
@@ -323,7 +313,7 @@
                                         placeholder="https://yourname.github.io/repo/" 
                                     />
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-1">Paste your deployed GitHub link here if running locally.</p>
+                                <p className="text-[10px] text-slate-400 mt-1">This link is embedded in the QR code.</p>
                             </div>
 
                             <div className="pt-4 border-t">
@@ -405,5 +395,6 @@
     </script>
 </body>
 </html>
+
 
 
